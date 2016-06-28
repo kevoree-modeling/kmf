@@ -1,7 +1,6 @@
 package org.kmf.generator;
 
 import org.jboss.forge.roaster.Roaster;
-import org.jboss.forge.roaster.model.JavaType;
 import org.jboss.forge.roaster.model.Visibility;
 import org.jboss.forge.roaster.model.source.JavaClassSource;
 import org.jboss.forge.roaster.model.source.JavaEnumSource;
@@ -18,6 +17,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 public class Generator {
 
@@ -51,6 +51,9 @@ public class Generator {
     }
 
     public void generate(String name, File target) {
+
+        boolean useML = false;
+
         sources = new ArrayList<JavaSource>();
         //Generate all NodeType
         for (KClassifier classifier : model.classifiers()) {
@@ -141,20 +144,79 @@ public class Generator {
                             remove.setBody("super.remove(" + prop.name().toUpperCase() + ",(org.mwg.Node)value);return this;");
 
                         } else {
-                            //generate getter
-                            MethodSource<JavaClassSource> getter = javaClass.addMethod();
-                            getter.setVisibility(Visibility.PUBLIC);
-                            getter.setReturnType(typeToClassName(prop.type()));
-                            getter.setName(toCamelCase("get " + prop.name()));
-                            getter.setBody("return (" + typeToClassName(prop.type()) + ") super.get(" + prop.name().toUpperCase() + ");");
 
-                            //generate setter
-                            MethodSource<JavaClassSource> setter = javaClass.addMethod();
-                            setter.setVisibility(Visibility.PUBLIC);
-                            setter.setName(toCamelCase("set " + prop.name()));
-                            setter.setReturnType(classifier.fqn());
-                            setter.addParameter(typeToClassName(prop.type()), "value");
-                            setter.setBody("super.setProperty(" + prop.name().toUpperCase() + ", (byte)" + nameToType(prop.type()) + ",value);return this;");
+                            if (prop.algorithm() != null) {
+                                useML = true;
+                                //attribute will be processed as a sub node
+                                //generate getter
+                                MethodSource<JavaClassSource> getter = javaClass.addMethod();
+                                getter.setVisibility(Visibility.PUBLIC);
+                                getter.setReturnType(typeToClassName(prop.type()));
+                                getter.setName(toCamelCase("get " + prop.name()));
+
+                                getter.setBody("\t\tfinal org.mwg.DeferCounter waiter = this.graph().newCounter(1);\n" +
+                                        "this.rel(" + prop.name().toUpperCase() + ", new org.mwg.Callback<org.mwg.Node[]>() {\n" +
+                                        "@Override\n" +
+                                        "public void on(org.mwg.Node[] raw) {\n" +
+                                        "if (raw == null || raw.length == 0) {\n" +
+                                        "waiter.count();\n" +
+                                        "} else {\n" +
+                                        "org.mwg.ml.RegressionNode casted = (org.mwg.ml.RegressionNode) raw[0];\n" +
+                                        "casted.extrapolate(waiter.wrap());\n" +
+                                        "}\n" +
+                                        "}\n" +
+                                        "});\n" +
+                                        "return (" + typeToClassName(prop.type()) + ") waiter.waitResult();");
+                                
+                                //generate setter
+                                MethodSource<JavaClassSource> setter = javaClass.addMethod();
+                                setter.setVisibility(Visibility.PUBLIC);
+                                setter.setName(toCamelCase("set " + prop.name()));
+                                setter.setReturnType(classifier.fqn());
+                                setter.addParameter(typeToClassName(prop.type()), "value");
+
+                                StringBuffer buffer = new StringBuffer();
+                                buffer.append(" final org.mwg.DeferCounter waiter = this.graph().newCounter(1);\n" +
+                                        "        final Software selfPointer = this;\n" +
+                                        "        this.rel(" + prop.name().toUpperCase() + ", new org.mwg.Callback<org.mwg.Node[]>() {\n" +
+                                        "            @Override\n" +
+                                        "            public void on(org.mwg.Node[] raw) {\n" +
+                                        "                if (raw == null || raw.length == 0) {\n" +
+                                        "                    org.mwg.ml.RegressionNode casted = (org.mwg.ml.RegressionNode) graph().newTypedNode(world(),time(),\"" + prop.algorithm() + "\");\n" +
+                                        "                    selfPointer.add(" + prop.name().toUpperCase() + ",casted);\n");
+
+                                for (String key : prop.parameters().keySet()) {
+                                    buffer.append("casted.set(\"" + key + "\"," + prop.parameters().get(key) + ");\n");
+                                }
+
+                                buffer.append("                 casted.learn(value, waiter.wrap());\n" +
+                                        "                } else {\n" +
+                                        "                    org.mwg.ml.RegressionNode casted = (org.mwg.ml.RegressionNode) raw[0];\n" +
+                                        "                    casted.learn(value, waiter.wrap());\n" +
+                                        "                }\n" +
+                                        "            }\n" +
+                                        "        });\n" +
+                                        "        waiter.waitResult();\n" +
+                                        "        return this;");
+
+                                setter.setBody(buffer.toString());
+                            } else {
+                                //generate getter
+                                MethodSource<JavaClassSource> getter = javaClass.addMethod();
+                                getter.setVisibility(Visibility.PUBLIC);
+                                getter.setReturnType(typeToClassName(prop.type()));
+                                getter.setName(toCamelCase("get " + prop.name()));
+                                getter.setBody("return (" + typeToClassName(prop.type()) + ") super.get(" + prop.name().toUpperCase() + ");");
+
+                                //generate setter
+                                MethodSource<JavaClassSource> setter = javaClass.addMethod();
+                                setter.setVisibility(Visibility.PUBLIC);
+                                setter.setName(toCamelCase("set " + prop.name()));
+                                setter.setReturnType(classifier.fqn());
+                                setter.addParameter(typeToClassName(prop.type()), "value");
+                                setter.setBody("super.setProperty(" + prop.name().toUpperCase() + ", (byte)" + nameToType(prop.type()) + ",value);return this;");
+                            }
+
                         }
 
                     }
@@ -203,22 +265,23 @@ public class Generator {
 
         MethodSource<JavaClassSource> modelConstructor = modelClass.addMethod().setConstructor(true);
         modelConstructor.addParameter(GraphBuilder.class, "builder");
-        modelConstructor.setBody("this._graph = builder.withPlugin(new samplePlugin()).build();");
-
+        if (useML) {
+            modelConstructor.setBody("this._graph = builder.withPlugin(new org.mwg.ml.MLPlugin()).withPlugin(new samplePlugin()).build();");
+        } else {
+            modelConstructor.setBody("this._graph = builder.withPlugin(new samplePlugin()).build();");
+        }
         modelClass.addMethod().setName("graph").setBody("return this._graph;").setVisibility(Visibility.PUBLIC).setReturnType(Graph.class);
 
         for (KClassifier classifier : model.classifiers()) {
             if (!(classifier instanceof KEnum)) {
-                MethodSource<JavaClassSource> loopNewMethod = modelClass.addMethod().setName(toCamelCase("new "+classifier.name()));
+                MethodSource<JavaClassSource> loopNewMethod = modelClass.addMethod().setName(toCamelCase("new " + classifier.name()));
                 loopNewMethod.setReturnType(classifier.fqn());
-                loopNewMethod.addParameter("long","world");
-                loopNewMethod.addParameter("long","time");
-                loopNewMethod.setBody("return ("+classifier.fqn()+")this._graph.newTypedNode(world,time,"+classifier.fqn()+".NODE_NAME);");
+                loopNewMethod.addParameter("long", "world");
+                loopNewMethod.addParameter("long", "time");
+                loopNewMethod.setBody("return (" + classifier.fqn() + ")this._graph.newTypedNode(world,time," + classifier.fqn() + ".NODE_NAME);");
             }
         }
-
         sources.add(modelClass);
-
 
         //DEBUG print
         for (JavaSource src : sources) {

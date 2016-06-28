@@ -1,11 +1,21 @@
+enum hello.SmartMeterState {
+    InError, Healthy, Pending
+}
+
 class cloud.Cloud {
     rel servers : cloud.Server
 }
 class cloud.Server {
     att name : String
-    rel softwares : cloud.Service
+    rel softwares : cloud.Software
 }
-class cloud.Service {
+class cloud.Software {
     att name : String
-    att memory : Long
+    att load : Double {
+        using "PolynomialNode"
+        with precision 0.1
+    }
+    att loadProfile : Double {
+
+    }
 }

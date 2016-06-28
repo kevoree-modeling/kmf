@@ -11,5 +11,8 @@ class sample.Node {
 }
 class sample.Software {
     att name : String
-    att size : Integer
+    att load : Double {
+        using "Polynomial"
+        with precision 0.1
+    }
 }
