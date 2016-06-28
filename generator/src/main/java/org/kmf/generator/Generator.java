@@ -1,6 +1,7 @@
 package org.kmf.generator;
 
 import org.jboss.forge.roaster.Roaster;
+import org.jboss.forge.roaster.model.JavaType;
 import org.jboss.forge.roaster.model.Visibility;
 import org.jboss.forge.roaster.model.source.JavaClassSource;
 import org.jboss.forge.roaster.model.source.JavaEnumSource;
@@ -9,6 +10,7 @@ import org.jboss.forge.roaster.model.source.MethodSource;
 import org.kevoree.modeling.ast.*;
 import org.kevoree.modeling.ast.impl.Model;
 import org.mwg.Graph;
+import org.mwg.GraphBuilder;
 import org.mwg.Type;
 
 import java.io.File;
@@ -188,6 +190,35 @@ public class Generator {
 
         pluginConstructor.setBody(constructorContent.toString());
         sources.add(pluginClass);
+
+        //Generate model
+        final JavaClassSource modelClass = Roaster.create(JavaClassSource.class);
+        if (name.contains(".")) {
+            modelClass.setPackage(name.substring(0, name.lastIndexOf('.')));
+            modelClass.setName(name.substring(name.lastIndexOf('.') + 1) + "Model");
+        } else {
+            modelClass.setName(name + "Model");
+        }
+        modelClass.addField().setName("_graph").setVisibility(Visibility.PRIVATE).setType(Graph.class).setFinal(true);
+
+        MethodSource<JavaClassSource> modelConstructor = modelClass.addMethod().setConstructor(true);
+        modelConstructor.addParameter(GraphBuilder.class, "builder");
+        modelConstructor.setBody("this._graph = builder.withPlugin(new samplePlugin()).build();");
+
+        modelClass.addMethod().setName("graph").setBody("return this._graph;").setVisibility(Visibility.PUBLIC).setReturnType(Graph.class);
+
+        for (KClassifier classifier : model.classifiers()) {
+            if (!(classifier instanceof KEnum)) {
+                MethodSource<JavaClassSource> loopNewMethod = modelClass.addMethod().setName(toCamelCase("new "+classifier.name()));
+                loopNewMethod.setReturnType(classifier.fqn());
+                loopNewMethod.addParameter("long","world");
+                loopNewMethod.addParameter("long","time");
+                loopNewMethod.setBody("return ("+classifier.fqn()+")this._graph.newTypedNode(world,time,"+classifier.fqn()+".NODE_NAME);");
+            }
+        }
+
+        sources.add(modelClass);
+
 
         //DEBUG print
         for (JavaSource src : sources) {
