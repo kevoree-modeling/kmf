@@ -10,7 +10,7 @@ public class GeneratorTest {
     public void test() throws Exception {
         Generator gen = new Generator();
         gen.scan(new File("/Users/duke/dev/kmf/generator/src/test/resources"));
-        gen.generate(new File("/Users/duke/dev/kmf/generator/src/test/resources/out"));
+        gen.generate("TestModel", new File("/Users/duke/dev/kmf/generator/target/generated-sources"));
     }
 
 }

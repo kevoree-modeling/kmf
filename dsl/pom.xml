@@ -3,21 +3,16 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.kevoree.kmf</groupId>
     <artifactId>dsl</artifactId>
     <version>1-SNAPSHOT</version>
     <name>kmf :: DSL</name>
 
-    <properties>
-        <antlr.version>4.5.3</antlr.version>
-    </properties>
-
-    <licenses>
-        <license>
-            <name>Apache Software License 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
-        </license>
-    </licenses>
+    <parent>
+        <groupId>org.kevoree.kmf</groupId>
+        <artifactId>kmf</artifactId>
+        <version>1-SNAPSHOT</version>
+        <relativePath>..</relativePath>
+    </parent>
 
     <dependencies>
         <dependency>
@@ -73,67 +68,5 @@
             </plugin>
         </plugins>
     </build>
-
-    <repositories>
-        <repository>
-            <id>OSS-public</id>
-            <url>https://oss.sonatype.org/content/groups/public/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>OSS-public</id>
-            <url>https://oss.sonatype.org/content/groups/public/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
-
-    <distributionManagement>
-        <repository>
-            <id>kevoree.oss.release</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
-        </repository>
-        <snapshotRepository>
-            <id>kevoree.oss.snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
-
-    <developers>
-        <developer>
-            <name>Francois Fouquet</name>
-            <id>francois.fouquet</id>
-            <email>fouquet.f@gmail.com</email>
-            <roles>
-                <role>admin</role>
-                <role>developer</role>
-            </roles>
-            <timezone>+2</timezone>
-        </developer>
-    </developers>
-
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>7</version>
-    </parent>
-
-    <scm>
-        <connection>scm:git:git@github.com:kevoree-modeling/dsl.git</connection>
-        <developerConnection>scm:git:git@github.com:kevoree-modeling/dsl.git</developerConnection>
-        <url>http://github.com/kevoree-modeling/dsl.git</url>
-    </scm>
 
 </project>

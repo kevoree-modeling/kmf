@@ -1,8 +1,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.kmf</groupId>
-    <artifactId>root</artifactId>
+    <groupId>org.kevoree.kmf</groupId>
+    <artifactId>kmf</artifactId>
     <packaging>pom</packaging>
     <version>1-SNAPSHOT</version>
     <name>kmf</name>
@@ -15,6 +15,13 @@
             <url>http://www.gnu.org/licenses/gpl-3.0.en.html</url>
         </license>
     </licenses>
+
+    <properties>
+        <antlr.version>4.5.3</antlr.version>
+        <roaster.version>2.18.7.Final</roaster.version>
+        <j2ts.version>61</j2ts.version>
+        <mwg.version>4-SNAPSHOT</mwg.version>
+    </properties>
 
     <scm>
         <connection>scm:git:git@github.com:kevoree-modeling/kmf.git</connection>
@@ -72,6 +79,7 @@
     <modules>
         <module>dsl</module>
         <module>generator</module>
+        <module>mavenplugin</module>
     </modules>
 
     <dependencies>

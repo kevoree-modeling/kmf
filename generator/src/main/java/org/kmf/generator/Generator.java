@@ -5,10 +5,15 @@ import org.jboss.forge.roaster.model.Visibility;
 import org.jboss.forge.roaster.model.source.JavaClassSource;
 import org.jboss.forge.roaster.model.source.JavaEnumSource;
 import org.jboss.forge.roaster.model.source.JavaSource;
+import org.jboss.forge.roaster.model.source.MethodSource;
 import org.kevoree.modeling.ast.*;
 import org.kevoree.modeling.ast.impl.Model;
+import org.mwg.Graph;
+import org.mwg.Type;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,8 +34,23 @@ public class Generator {
         }
     }
 
-    public void generate(File target) {
+    public void deepScan(File target) throws Exception {
+        String[] everythingInThisDir = target.list();
+        for (String name : everythingInThisDir) {
+            if (name.trim().endsWith(extension)) {
+                ModelBuilder.parse(new File(target, name), model);
+            } else {
+                File current = new File(target, name);
+                if (current.isDirectory()) {
+                    deepScan(current);
+                }
+            }
+        }
+    }
+
+    public void generate(String name, File target) {
         sources = new ArrayList<JavaSource>();
+        //Generate all NodeType
         for (KClassifier classifier : model.classifiers()) {
             if (classifier instanceof KEnum) {
                 KEnum loopEnum = (KEnum) classifier;
@@ -51,11 +71,29 @@ public class Generator {
                 }
                 javaClass.setName(classifier.name());
 
-                String parentName = "org.mwg.AbstractNode";
+                String parentName = "org.mwg.plugin.AbstractNode";
                 if (loopClass.parent() != null) {
                     parentName = loopClass.parent().fqn();
                 }
                 javaClass.setSuperType(parentName);
+
+                MethodSource<JavaClassSource> constructor = javaClass.addMethod().setConstructor(true);
+                constructor.addParameter("long", "p_world");
+                constructor.addParameter("long", "p_time");
+                constructor.addParameter("long", "p_id");
+                constructor.addParameter(Graph.class, "p_graph");
+                constructor.addParameter("long[]", "currentResolution");
+                constructor.setBody("super(p_world, p_time, p_id, p_graph, currentResolution);");
+                constructor.setVisibility(Visibility.PUBLIC);
+
+                //add helper name
+                javaClass.addField()
+                        .setVisibility(Visibility.PUBLIC)
+                        .setFinal(true)
+                        .setName("NODE_NAME")
+                        .setType(String.class)
+                        .setStringInitializer(javaClass.getCanonicalName())
+                        .setStatic(true);
 
                 for (KProperty prop : loopClass.properties()) {
 
@@ -63,21 +101,60 @@ public class Generator {
                     javaClass.addField()
                             .setVisibility(Visibility.PUBLIC)
                             .setFinal(true)
-                            .setName(prop.name())
+                            .setName(prop.name().toUpperCase())
                             .setType(String.class)
                             .setStringInitializer(prop.name())
                             .setStatic(true);
                     //pojo generation
                     if (!prop.derived() && !prop.learned()) {
-                        javaClass.addMethod()
-                                .setName(toCamelCase("get " + prop.name()))
-                                .setBody("return node.get(" + prop.name() + ");");
 
-                        javaClass.addMethod()
-                                .setName(toCamelCase("set " + prop.name()))
-                                .setReturnType(classifier.fqn())
-                                .setBody("return node.set(" + prop.name() + ",value);")
-                                .addParameter("hello.Titi", "value");
+                        if (prop instanceof KRelation) {
+                            //generate getter
+                            MethodSource<JavaClassSource> getter = javaClass.addMethod();
+                            getter.setVisibility(Visibility.PUBLIC);
+                            getter.setReturnType(typeToClassName(prop.type()) + "[]");
+                            getter.setName(toCamelCase("get " + prop.name()));
+                            getter.setBody(
+                                    "org.mwg.DeferCounter waiter = this.graph().newCounter(1);\n" +
+                                            "this.rel(" + prop.name().toUpperCase() + ", waiter.wrap());\n" +
+                                            "org.mwg.Node[] raw = (org.mwg.Node[]) waiter.waitResult();" +
+                                            typeToClassName(prop.type()) + "[] casted = new " + typeToClassName(prop.type()) + "[raw.length];" +
+                                            "System.arraycopy(raw,0,casted,0,raw.length);\n" +
+                                            "return casted;");
+
+                            //generate setter
+                            MethodSource<JavaClassSource> add = javaClass.addMethod();
+                            add.setVisibility(Visibility.PUBLIC);
+                            add.setName(toCamelCase("addTo " + prop.name()));
+                            add.setReturnType(classifier.fqn());
+                            add.addParameter(typeToClassName(prop.type()), "value");
+                            add.setBody("super.add(" + prop.name().toUpperCase() + ",(org.mwg.Node)value);return this;");
+
+                            //generate setter
+                            MethodSource<JavaClassSource> remove = javaClass.addMethod();
+                            remove.setVisibility(Visibility.PUBLIC);
+                            remove.setName(toCamelCase("removeFrom " + prop.name()));
+                            remove.setReturnType(classifier.fqn());
+                            remove.addParameter(typeToClassName(prop.type()), "value");
+                            remove.setBody("super.remove(" + prop.name().toUpperCase() + ",(org.mwg.Node)value);return this;");
+
+                        } else {
+                            //generate getter
+                            MethodSource<JavaClassSource> getter = javaClass.addMethod();
+                            getter.setVisibility(Visibility.PUBLIC);
+                            getter.setReturnType(typeToClassName(prop.type()));
+                            getter.setName(toCamelCase("get " + prop.name()));
+                            getter.setBody("return (" + typeToClassName(prop.type()) + ") super.get(" + prop.name().toUpperCase() + ");");
+
+                            //generate setter
+                            MethodSource<JavaClassSource> setter = javaClass.addMethod();
+                            setter.setVisibility(Visibility.PUBLIC);
+                            setter.setName(toCamelCase("set " + prop.name()));
+                            setter.setReturnType(classifier.fqn());
+                            setter.addParameter(typeToClassName(prop.type()), "value");
+                            setter.setBody("super.setProperty(" + prop.name().toUpperCase() + ", (byte)" + nameToType(prop.type()) + ",value);return this;");
+                        }
+
                     }
                 }
 
@@ -85,18 +162,53 @@ public class Generator {
 
             }
         }
+        //Generate plugin
+        final JavaClassSource pluginClass = Roaster.create(JavaClassSource.class);
+        if (name.contains(".")) {
+            pluginClass.setPackage(name.substring(0, name.lastIndexOf('.')));
+            pluginClass.setName(name.substring(name.lastIndexOf('.') + 1) + "Plugin");
+        } else {
+            pluginClass.setName(name + "Plugin");
+        }
+        pluginClass.setSuperType("org.mwg.plugin.AbstractPlugin");
+        MethodSource<JavaClassSource> pluginConstructor = pluginClass.addMethod().setConstructor(true);
+        StringBuilder constructorContent = new StringBuilder();
+        constructorContent.append("super();\n");
+        for (KClassifier classifier : model.classifiers()) {
+            if (!(classifier instanceof KEnum)) {
+                String fqn = classifier.fqn();
+                constructorContent.append("\t\tdeclareNodeType(" + fqn + ".NODE_NAME, new org.mwg.plugin.NodeFactory() {\n" +
+                        "\t\t\t@Override\n" +
+                        "\t\t\tpublic org.mwg.Node create(long world, long time, long id, org.mwg.Graph graph, long[] initialResolution) {\n" +
+                        "\t\t\t\treturn (org.mwg.Node)new " + fqn + "(world,time,id,graph,initialResolution);\n" +
+                        "\t\t\t}\n" +
+                        "\t\t});");
+            }
+        }
+
+        pluginConstructor.setBody(constructorContent.toString());
+        sources.add(pluginClass);
 
         //DEBUG print
         for (JavaSource src : sources) {
 
-
-            System.out.println(src);
+            File targetPkg;
+            if (src.getPackage() != null) {
+                targetPkg = new File(target.getAbsolutePath() + File.separator + src.getPackage().replace(".", File.separator));
+            } else {
+                targetPkg = target;
+            }
+            targetPkg.mkdirs();
+            File targetSrc = new File(targetPkg, src.getName() + ".java");
+            try {
+                FileWriter writer = new FileWriter(targetSrc);
+                writer.write(src.toString());
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
-    }
-
-    private String toType(final String init) {
-        return "";
     }
 
     private String toCamelCase(final String init) {
@@ -118,5 +230,35 @@ public class Generator {
         }
         return ret.toString();
     }
+
+    private static byte nameToType(final String name) {
+        switch (name) {
+            case "Integer":
+                return Type.INT;
+            case "Long":
+                return Type.LONG;
+            case "String":
+                return Type.STRING;
+        }
+        return -1;
+    }
+
+    private static String typeToClassName(String mwgTypeName) {
+        byte mwgType = nameToType(mwgTypeName);
+        switch (mwgType) {
+            case Type.BOOL:
+                return java.lang.Boolean.class.getCanonicalName();
+            case Type.DOUBLE:
+                return java.lang.Double.class.getCanonicalName();
+            case Type.INT:
+                return java.lang.Integer.class.getCanonicalName();
+            case Type.LONG:
+                return java.lang.Long.class.getCanonicalName();
+            case Type.STRING:
+                return java.lang.String.class.getCanonicalName();
+        }
+        return mwgTypeName;
+    }
+
 
 }
