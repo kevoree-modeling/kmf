@@ -20,7 +20,7 @@
         <antlr.version>4.5.3</antlr.version>
         <roaster.version>2.18.7.Final</roaster.version>
         <j2ts.version>61</j2ts.version>
-        <mwg.version>4-SNAPSHOT</mwg.version>
+        <mwg.version>4</mwg.version>
     </properties>
 
     <scm>
