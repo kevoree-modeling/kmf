@@ -2,6 +2,10 @@ enum hello.SmartMeterState {
     InError, Healthy, Pending
 }
 
+index clouds : cloud.Software {
+    name
+}
+
 class cloud.Cloud {
     rel servers : cloud.Server
 }

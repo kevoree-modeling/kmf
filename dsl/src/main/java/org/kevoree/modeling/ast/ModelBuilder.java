@@ -45,7 +45,7 @@ public class ModelBuilder {
             if (enumDeclrContext.IDENT() != null) {
                 fqn = enumDeclrContext.IDENT().toString();
             }
-            final KEnum enumClass = (KEnum) getOrAdd(model, fqn, true);
+            final KEnum enumClass = (KEnum) getOrAddEnum(model, fqn);
             for (TerminalNode literal : enumDeclrContext.enumLiterals().IDENT()) {
                 enumClass.addLiteral(literal.getText());
             }
@@ -58,15 +58,15 @@ public class ModelBuilder {
             if (classDeclrContext.IDENT() != null) {
                 classFqn = classDeclrContext.IDENT().toString();
             }
-            final KClass newClass = (KClass) getOrAdd(model, classFqn, false);
+            final KClass newClass = (KClass) getOrAddClass(model, classFqn);
             //process parents
             if (classDeclrContext.parentsDeclr() != null) {
                 if (classDeclrContext.parentsDeclr().TYPE_NAME() != null) {
-                    final KClass newClassTT = (KClass) getOrAdd(model, classDeclrContext.parentsDeclr().TYPE_NAME().toString(), false);
+                    final KClass newClassTT = (KClass) getOrAddClass(model, classDeclrContext.parentsDeclr().TYPE_NAME().toString());
                     newClass.setParent(newClassTT);
                 }
                 if (classDeclrContext.parentsDeclr().IDENT() != null) {
-                    final KClass newClassTT = (KClass) getOrAdd(model, classDeclrContext.parentsDeclr().IDENT().toString(), false);
+                    final KClass newClassTT = (KClass) getOrAddClass(model, classDeclrContext.parentsDeclr().IDENT().toString());
                     newClass.setParent(newClassTT);
                 }
             }
@@ -96,6 +96,20 @@ public class ModelBuilder {
                 processAnnotations(relation, relDecl.annotation());
                 processSemanticBloc(relation, relDecl.semanticDeclr());
                 newClass.addProperty(relation);
+            }
+        }
+
+        for (org.kevoree.modeling.ast.MetaModelParser.IndexDeclrContext indexDeclrContext : mmctx.indexDeclr()) {
+            String name = indexDeclrContext.IDENT().get(0).getText();
+            String type;
+            if (indexDeclrContext.TYPE_NAME() == null) {
+                type = indexDeclrContext.IDENT(1).toString();
+            } else {
+                type = indexDeclrContext.TYPE_NAME().toString();
+            }
+            final KIndex indexClass = (KIndex) getOrAddIndex(model, name, (KClass) model.get(type));
+            for (TerminalNode literal : indexDeclrContext.indexLiterals().IDENT()) {
+                indexClass.addProperty(literal.getText());
             }
         }
         return model;
@@ -154,19 +168,36 @@ public class ModelBuilder {
         }
     }
 
-    private static KClassifier getOrAdd(KModel model, String fqn, boolean isEnum) {
+    private static KClassifier getOrAddClass(KModel model, String fqn) {
         KClassifier previous = model.get(fqn);
         if (previous != null) {
             return previous;
         }
-        if (isEnum) {
-            previous = new Enum(fqn);
-        } else {
-            previous = new Class(fqn);
-        }
+        previous = new Class(fqn);
         model.addClassifier(previous);
         return previous;
     }
+
+    private static KClassifier getOrAddIndex(KModel model, String fqn, KClass clazz) {
+        KClassifier previous = model.get(fqn);
+        if (previous != null) {
+            return previous;
+        }
+        previous = new Index(fqn, clazz);
+        model.addClassifier(previous);
+        return previous;
+    }
+
+    private static KClassifier getOrAddEnum(KModel model, String fqn) {
+        KClassifier previous = model.get(fqn);
+        if (previous != null) {
+            return previous;
+        }
+        previous = new Enum(fqn);
+        model.addClassifier(previous);
+        return previous;
+    }
+
 
     /*
     private static boolean isPrimitiveTYpe(String nn) {

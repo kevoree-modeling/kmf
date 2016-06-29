@@ -17,7 +17,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
 
 public class Generator {
 
@@ -68,7 +67,7 @@ public class Generator {
                     javaEnum.addEnumConstant(literal);
                 }
                 sources.add(javaEnum);
-            } else {
+            } else if (classifier instanceof KClass) {
                 final JavaClassSource javaClass = Roaster.create(JavaClassSource.class);
                 KClass loopClass = (KClass) classifier;
                 if (classifier.pack() != null) {
@@ -110,7 +109,8 @@ public class Generator {
                             .setType(String.class)
                             .setStringInitializer(prop.name())
                             .setStatic(true);
-                    //pojo generation
+
+                    //POJO generation
                     if (!prop.derived() && !prop.learned()) {
 
                         if (prop instanceof KRelation) {
@@ -167,7 +167,7 @@ public class Generator {
                                         "}\n" +
                                         "});\n" +
                                         "return (" + typeToClassName(prop.type()) + ") waiter.waitResult();");
-                                
+
                                 //generate setter
                                 MethodSource<JavaClassSource> setter = javaClass.addMethod();
                                 setter.setVisibility(Visibility.PUBLIC);
@@ -177,7 +177,7 @@ public class Generator {
 
                                 StringBuffer buffer = new StringBuffer();
                                 buffer.append(" final org.mwg.DeferCounter waiter = this.graph().newCounter(1);\n" +
-                                        "        final Software selfPointer = this;\n" +
+                                        "        final " + classifier.fqn() + " selfPointer = this;\n" +
                                         "        this.rel(" + prop.name().toUpperCase() + ", new org.mwg.Callback<org.mwg.Node[]>() {\n" +
                                         "            @Override\n" +
                                         "            public void on(org.mwg.Node[] raw) {\n" +
@@ -201,6 +201,7 @@ public class Generator {
 
                                 setter.setBody(buffer.toString());
                             } else {
+
                                 //generate getter
                                 MethodSource<JavaClassSource> getter = javaClass.addMethod();
                                 getter.setVisibility(Visibility.PUBLIC);
@@ -208,13 +209,54 @@ public class Generator {
                                 getter.setName(toCamelCase("get " + prop.name()));
                                 getter.setBody("return (" + typeToClassName(prop.type()) + ") super.get(" + prop.name().toUpperCase() + ");");
 
+
                                 //generate setter
                                 MethodSource<JavaClassSource> setter = javaClass.addMethod();
                                 setter.setVisibility(Visibility.PUBLIC);
                                 setter.setName(toCamelCase("set " + prop.name()));
                                 setter.setReturnType(classifier.fqn());
                                 setter.addParameter(typeToClassName(prop.type()), "value");
-                                setter.setBody("super.setProperty(" + prop.name().toUpperCase() + ", (byte)" + nameToType(prop.type()) + ",value);return this;");
+
+                                StringBuffer buffer = new StringBuffer();
+                                if (prop.indexes().length > 0) {
+                                    buffer.append("final " + classifier.fqn() + " self = this;\n");
+                                    buffer.append("final org.mwg.DeferCounter waiterUnIndex = this.graph().newCounter(" + prop.indexes().length + ");\n");
+                                    buffer.append("final org.mwg.DeferCounter waiterIndex = this.graph().newCounter(" + prop.indexes().length + ");\n");
+
+                                    for (KIndex index : prop.indexes()) {
+                                        String queryParam = "";
+                                        for (KProperty loopP : index.properties()) {
+                                            if (!queryParam.isEmpty()) {
+                                                queryParam += ",";
+                                            }
+                                            queryParam += loopP.name();
+                                        }
+                                        buffer.append("this.graph().unindex(\"" + index.fqn() + "\",this,\"" + queryParam + "\",waiterUnIndex.wrap());");
+                                    }
+
+                                    buffer.append("waiterUnIndex.then(new org.mwg.plugin.Job() {");
+                                    buffer.append("@Override\n");
+                                    buffer.append("public void run() {\n");
+                                    buffer.append("self.setProperty(" + prop.name().toUpperCase() + ", (byte) " + nameToType(prop.type()) + ", value);");
+                                    for (KIndex index : prop.indexes()) {
+                                        String queryParam = "";
+                                        for (KProperty loopP : index.properties()) {
+                                            if (!queryParam.isEmpty()) {
+                                                queryParam += ",";
+                                            }
+                                            queryParam += loopP.name();
+                                        }
+                                        buffer.append("self.graph().index(\"" + index.fqn() + "\",self,\"" + queryParam + "\",waiterIndex.wrap());");
+                                    }
+
+                                    buffer.append("}\n});");
+                                    buffer.append("waiterIndex.waitResult();\n");
+
+                                } else {
+                                    buffer.append("super.setProperty(" + prop.name().toUpperCase() + ", (byte)" + nameToType(prop.type()) + ",value);");
+                                }
+                                buffer.append("return this;");
+                                setter.setBody(buffer.toString());
                             }
 
                         }
@@ -239,7 +281,7 @@ public class Generator {
         StringBuilder constructorContent = new StringBuilder();
         constructorContent.append("super();\n");
         for (KClassifier classifier : model.classifiers()) {
-            if (!(classifier instanceof KEnum)) {
+            if (classifier instanceof KClass) {
                 String fqn = classifier.fqn();
                 constructorContent.append("\t\tdeclareNodeType(" + fqn + ".NODE_NAME, new org.mwg.plugin.NodeFactory() {\n" +
                         "\t\t\t@Override\n" +
@@ -273,7 +315,7 @@ public class Generator {
         modelClass.addMethod().setName("graph").setBody("return this._graph;").setVisibility(Visibility.PUBLIC).setReturnType(Graph.class);
 
         for (KClassifier classifier : model.classifiers()) {
-            if (!(classifier instanceof KEnum)) {
+            if (classifier instanceof KClass) {
                 MethodSource<JavaClassSource> loopNewMethod = modelClass.addMethod().setName(toCamelCase("new " + classifier.name()));
                 loopNewMethod.setReturnType(classifier.fqn());
                 loopNewMethod.addParameter("long", "world");

@@ -2,7 +2,7 @@ package org.kevoree.modeling.ast;
 
 import java.util.Map;
 
-public interface KProperty {
+public interface KProperty extends Comparable {
 
     String name();
 
@@ -13,6 +13,10 @@ public interface KProperty {
     void setAlgorithm(String alg);
 
     KDependency[] dependencies();
+
+    void addIndex(KIndex index);
+
+    KIndex[] indexes();
 
     void addDependency(KDependency dependency);
 

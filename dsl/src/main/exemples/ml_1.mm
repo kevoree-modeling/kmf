@@ -1,6 +1,15 @@
 
+
+index customers : Customer {
+    from name
+}
+
 class Customer {
     att name : String
+
+    index Customers { name }
+    index Customers { name }
+
 }
 
 class smartgrid.SmartMeter {
@@ -9,7 +18,12 @@ class smartgrid.SmartMeter {
     rel customer : Customer {
         with upperBound 3
     }
-    learned att isAnomaly : Boolean {
+
+    index customers : Customer {
+        from name
+    }
+
+    att isAnomaly : Boolean learnedUsing {
         from "this.activeEnergy"
         from "reactiveEnery"
         from "this.elements.parent"

@@ -6,6 +6,8 @@ public interface KClass extends KClassifier {
 
     void addProperty(KProperty property);
 
+    KProperty property(String name);
+
     KClass parent();
 
     void setParent(KClass parent);

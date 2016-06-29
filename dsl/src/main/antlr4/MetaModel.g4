@@ -11,7 +11,11 @@ NUMBER : [\-]?[0-9]+'.'?[0-9]*;
 WS : ([ \t\r\n]+ | SL_COMMENT) -> skip ; // skip spaces, tabs, newlines
 SL_COMMENT :  '//' ~('\r' | '\n')* ;
 
-metamodel: (enumDeclr | classDeclr)*;
+metamodel: (enumDeclr | classDeclr | indexDeclr)*;
+
+indexDeclr : 'index' IDENT ':' (TYPE_NAME|IDENT) '{' indexLiterals '}';
+indexLiterals : IDENT (',' IDENT)*;
+
 enumDeclr : 'enum' (TYPE_NAME|IDENT) '{' enumLiterals '}';
 enumLiterals : IDENT (',' IDENT)*;
 classDeclr : 'class' (TYPE_NAME|IDENT) parentsDeclr? '{' (attributeDeclaration | relationDeclaration)* '}';

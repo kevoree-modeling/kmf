@@ -40,6 +40,10 @@ public class HelloWorld {
             System.out.println(soft0.getLoad());
 
 
+            model.graph().findAll(0,0,"clouds",cloudsResult -> {
+                System.out.println(cloudsResult[0]);
+            });
+
 
         });
 

@@ -33,6 +33,16 @@ public class Class implements KClass {
     }
 
     @Override
+    public KProperty property(String name) {
+        for (KProperty property : properties()) {
+            if (property.name().equals(name)) {
+                return property;
+            }
+        }
+        return null;
+    }
+
+    @Override
     public void addProperty(KProperty property) {
         properties.put(property.name(), property);
     }

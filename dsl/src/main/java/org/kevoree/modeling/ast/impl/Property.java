@@ -1,6 +1,7 @@
 package org.kevoree.modeling.ast.impl;
 
 import org.kevoree.modeling.ast.KDependency;
+import org.kevoree.modeling.ast.KIndex;
 import org.kevoree.modeling.ast.KProperty;
 
 import java.util.ArrayList;
@@ -16,6 +17,8 @@ public abstract class Property implements KProperty {
 
     private final List<KDependency> dependencies;
 
+    private final List<KIndex> indexes;
+
     private final Map<String, String> paramaters;
 
     private String alg;
@@ -29,6 +32,7 @@ public abstract class Property implements KProperty {
     public Property(String name, String type) {
         this.name = name;
         this.type = type;
+        indexes = new ArrayList<KIndex>();
         dependencies = new ArrayList<KDependency>();
         paramaters = new HashMap<String, String>();
     }
@@ -56,6 +60,16 @@ public abstract class Property implements KProperty {
     @Override
     public KDependency[] dependencies() {
         return dependencies.toArray(new KDependency[dependencies.size()]);
+    }
+
+    @Override
+    public void addIndex(KIndex index) {
+        indexes.add(index);
+    }
+
+    @Override
+    public KIndex[] indexes() {
+        return indexes.toArray(new KIndex[indexes.size()]);
     }
 
     @Override
@@ -101,5 +115,15 @@ public abstract class Property implements KProperty {
     @Override
     public void setGlobal() {
         global = true;
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        Property p2 = (Property) o;
+        if(p2.name().equals(name)){
+            return 0;
+        } else {
+            return name().compareTo(p2.name);
+        }
     }
 }
