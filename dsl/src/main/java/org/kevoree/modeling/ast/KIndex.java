@@ -6,4 +6,6 @@ public interface KIndex extends KClassifier {
 
     void addProperty(String value);
 
+    KClass type();
+
 }

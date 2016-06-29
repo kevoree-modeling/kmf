@@ -68,7 +68,7 @@ public class Generator {
                 }
                 sources.add(javaEnum);
             } else if (classifier instanceof KClass) {
-                final JavaClassSource javaClass = Roaster.create(JavaClassSource.class);
+                final JavaClassSource javaClass = Roaster.create(JavaClassSource.class).setFinal(true);
                 KClass loopClass = (KClass) classifier;
                 if (classifier.pack() != null) {
                     javaClass.setPackage(classifier.pack());
@@ -116,7 +116,7 @@ public class Generator {
                         if (prop instanceof KRelation) {
                             //generate getter
                             MethodSource<JavaClassSource> getter = javaClass.addMethod();
-                            getter.setVisibility(Visibility.PUBLIC);
+                            getter.setVisibility(Visibility.PUBLIC).setFinal(true);
                             getter.setReturnType(typeToClassName(prop.type()) + "[]");
                             getter.setName(toCamelCase("get " + prop.name()));
                             getter.setBody(
@@ -129,7 +129,7 @@ public class Generator {
 
                             //generate setter
                             MethodSource<JavaClassSource> add = javaClass.addMethod();
-                            add.setVisibility(Visibility.PUBLIC);
+                            add.setVisibility(Visibility.PUBLIC).setFinal(true);
                             add.setName(toCamelCase("addTo " + prop.name()));
                             add.setReturnType(classifier.fqn());
                             add.addParameter(typeToClassName(prop.type()), "value");
@@ -137,7 +137,7 @@ public class Generator {
 
                             //generate setter
                             MethodSource<JavaClassSource> remove = javaClass.addMethod();
-                            remove.setVisibility(Visibility.PUBLIC);
+                            remove.setVisibility(Visibility.PUBLIC).setFinal(true);
                             remove.setName(toCamelCase("removeFrom " + prop.name()));
                             remove.setReturnType(classifier.fqn());
                             remove.addParameter(typeToClassName(prop.type()), "value");
@@ -150,7 +150,7 @@ public class Generator {
                                 //attribute will be processed as a sub node
                                 //generate getter
                                 MethodSource<JavaClassSource> getter = javaClass.addMethod();
-                                getter.setVisibility(Visibility.PUBLIC);
+                                getter.setVisibility(Visibility.PUBLIC).setFinal(true);
                                 getter.setReturnType(typeToClassName(prop.type()));
                                 getter.setName(toCamelCase("get " + prop.name()));
 
@@ -170,7 +170,7 @@ public class Generator {
 
                                 //generate setter
                                 MethodSource<JavaClassSource> setter = javaClass.addMethod();
-                                setter.setVisibility(Visibility.PUBLIC);
+                                setter.setVisibility(Visibility.PUBLIC).setFinal(true);
                                 setter.setName(toCamelCase("set " + prop.name()));
                                 setter.setReturnType(classifier.fqn());
                                 setter.addParameter(typeToClassName(prop.type()), "value");
@@ -204,7 +204,7 @@ public class Generator {
 
                                 //generate getter
                                 MethodSource<JavaClassSource> getter = javaClass.addMethod();
-                                getter.setVisibility(Visibility.PUBLIC);
+                                getter.setVisibility(Visibility.PUBLIC).setFinal(true);
                                 getter.setReturnType(typeToClassName(prop.type()));
                                 getter.setName(toCamelCase("get " + prop.name()));
                                 getter.setBody("return (" + typeToClassName(prop.type()) + ") super.get(" + prop.name().toUpperCase() + ");");
@@ -212,7 +212,7 @@ public class Generator {
 
                                 //generate setter
                                 MethodSource<JavaClassSource> setter = javaClass.addMethod();
-                                setter.setVisibility(Visibility.PUBLIC);
+                                setter.setVisibility(Visibility.PUBLIC).setFinal(true);
                                 setter.setName(toCamelCase("set " + prop.name()));
                                 setter.setReturnType(classifier.fqn());
                                 setter.addParameter(typeToClassName(prop.type()), "value");
@@ -312,17 +312,60 @@ public class Generator {
         } else {
             modelConstructor.setBody("this._graph = builder.withPlugin(new samplePlugin()).build();");
         }
-        modelClass.addMethod().setName("graph").setBody("return this._graph;").setVisibility(Visibility.PUBLIC).setReturnType(Graph.class);
+        modelClass.addMethod().setName("graph").setBody("return this._graph;").setVisibility(Visibility.PUBLIC).setFinal(true).setReturnType(Graph.class);
 
         for (KClassifier classifier : model.classifiers()) {
             if (classifier instanceof KClass) {
                 MethodSource<JavaClassSource> loopNewMethod = modelClass.addMethod().setName(toCamelCase("new " + classifier.name()));
+                loopNewMethod.setVisibility(Visibility.PUBLIC).setFinal(true);
                 loopNewMethod.setReturnType(classifier.fqn());
                 loopNewMethod.addParameter("long", "world");
                 loopNewMethod.addParameter("long", "time");
                 loopNewMethod.setBody("return (" + classifier.fqn() + ")this._graph.newTypedNode(world,time," + classifier.fqn() + ".NODE_NAME);");
             }
+            if (classifier instanceof KIndex) {
+                KIndex casted = (KIndex) classifier;
+                MethodSource<JavaClassSource> loopFindMethod = modelClass.addMethod().setName(toCamelCase("find " + classifier.name()));
+                loopFindMethod.setVisibility(Visibility.PUBLIC).setFinal(true);
+                loopFindMethod.setReturnType(casted.type().fqn());
+                loopFindMethod.addParameter("long", "world");
+                loopFindMethod.addParameter("long", "time");
+                loopFindMethod.addParameter("String", "query");
+                loopFindMethod.setBody("" +
+                        "        final org.mwg.DeferCounter waiter = _graph.newCounter(1);\n" +
+                        "        this._graph.find(world, time, \"" + casted.fqn() + "\", query, new org.mwg.Callback<org.mwg.Node[]>() {\n" +
+                        "            @Override\n" +
+                        "            public void on(org.mwg.Node[] result) {\n" +
+                        "                if (result.length > 0) {\n" +
+                        "                    waiter.wrap().on(result[0]);\n" +
+                        "                } else {\n" +
+                        "                    waiter.count();\n" +
+                        "                }\n" +
+                        "            }\n" +
+                        "        });\n" +
+                        "        return (" + casted.type().fqn() + ") waiter.waitResult();");
+
+                MethodSource<JavaClassSource> loopFindAllMethod = modelClass.addMethod().setName(toCamelCase("findAll " + classifier.name()));
+                loopFindAllMethod.setVisibility(Visibility.PUBLIC).setFinal(true);
+                loopFindAllMethod.setReturnType(casted.type().fqn()+"[]");
+                loopFindAllMethod.addParameter("long", "world");
+                loopFindAllMethod.addParameter("long", "time");
+                loopFindAllMethod.setBody("" +
+                        "        final org.mwg.DeferCounter waiter = _graph.newCounter(1);\n" +
+                        "        this._graph.findAll(world, time, \"" + casted.fqn() + "\", new org.mwg.Callback<org.mwg.Node[]>() {\n" +
+                        "            @Override\n" +
+                        "            public void on(org.mwg.Node[] result) {\n" +
+                        "                "+casted.type().fqn()+"[] typedResult = new "+casted.type().fqn()+"[result.length];\n" +
+                        "                System.arraycopy(result, 0, typedResult, 0, result.length);\n" +
+                        "                waiter.wrap().on(typedResult);" +
+                        "            }\n" +
+                        "        });\n" +
+                        "        return (" + casted.type().fqn() + "[]) waiter.waitResult();");
+
+            }
         }
+
+
         sources.add(modelClass);
 
         //DEBUG print

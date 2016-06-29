@@ -32,7 +32,7 @@ public class HelloWorld {
             soft0.jump(10, new Callback<Node>() {
                 @Override
                 public void on(Node soft0_t10) {
-                    ((Software)soft0_t10).setLoad(50.0);
+                    ((Software) soft0_t10).setLoad(50.0);
                     System.out.println(soft0_t10);
                 }
             });
@@ -40,12 +40,17 @@ public class HelloWorld {
             System.out.println(soft0.getLoad());
 
 
-            model.graph().findAll(0,0,"clouds",cloudsResult -> {
+            model.graph().findAll(0, 0, "clouds", cloudsResult -> {
                 System.out.println(cloudsResult[0]);
             });
-            model.graph().find(0,0,"clouds","name=Hello",cloudsResult -> {
+            model.graph().find(0, 0, "clouds", "name=Hello", cloudsResult -> {
                 System.out.println(cloudsResult[0]);
             });
+
+            Software[] softwares = model.findAllClouds(0, 0);
+            System.out.println(softwares[0]);
+
+            System.out.println(model.findClouds(0,0,"name=Hello"));
 
 
         });

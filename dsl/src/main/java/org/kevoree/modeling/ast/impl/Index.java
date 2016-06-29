@@ -42,6 +42,11 @@ public class Index implements KIndex {
     }
 
     @Override
+    public KClass type() {
+        return this.clazz;
+    }
+
+    @Override
     public String name() {
         return name;
     }
