@@ -43,6 +43,9 @@ public class HelloWorld {
             model.graph().findAll(0,0,"clouds",cloudsResult -> {
                 System.out.println(cloudsResult[0]);
             });
+            model.graph().find(0,0,"clouds","name=Hello",cloudsResult -> {
+                System.out.println(cloudsResult[0]);
+            });
 
 
         });
