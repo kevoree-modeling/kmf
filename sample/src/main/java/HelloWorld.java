@@ -52,6 +52,8 @@ public class HelloWorld {
 
             System.out.println(model.findClouds(0,0,"name=Hello"));
 
+            System.out.println(model.findClouds(0,0,"name=NOOP"));
+
 
         });
 

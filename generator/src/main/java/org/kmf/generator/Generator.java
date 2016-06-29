@@ -347,7 +347,7 @@ public class Generator {
 
                 MethodSource<JavaClassSource> loopFindAllMethod = modelClass.addMethod().setName(toCamelCase("findAll " + classifier.name()));
                 loopFindAllMethod.setVisibility(Visibility.PUBLIC).setFinal(true);
-                loopFindAllMethod.setReturnType(casted.type().fqn()+"[]");
+                loopFindAllMethod.setReturnType(casted.type().fqn() + "[]");
                 loopFindAllMethod.addParameter("long", "world");
                 loopFindAllMethod.addParameter("long", "time");
                 loopFindAllMethod.setBody("" +
@@ -355,13 +355,12 @@ public class Generator {
                         "        this._graph.findAll(world, time, \"" + casted.fqn() + "\", new org.mwg.Callback<org.mwg.Node[]>() {\n" +
                         "            @Override\n" +
                         "            public void on(org.mwg.Node[] result) {\n" +
-                        "                "+casted.type().fqn()+"[] typedResult = new "+casted.type().fqn()+"[result.length];\n" +
+                        "                " + casted.type().fqn() + "[] typedResult = new " + casted.type().fqn() + "[result.length];\n" +
                         "                System.arraycopy(result, 0, typedResult, 0, result.length);\n" +
                         "                waiter.wrap().on(typedResult);" +
                         "            }\n" +
                         "        });\n" +
                         "        return (" + casted.type().fqn() + "[]) waiter.waitResult();");
-
             }
         }
 

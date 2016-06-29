@@ -12,10 +12,15 @@ class cloud.Cloud {
 class cloud.Server {
     att name : String
     rel softwares : cloud.Software
+
+    index softwares2 : cloud.Software {
+
+    }
+
 }
 class cloud.Software {
     att name : String
-    att load : Double {
+    derived att load : Double {
         using "PolynomialNode"
         with precision 0.1
     }
