@@ -7,6 +7,9 @@ import cloud.Cloud;
 import org.mwg.Node;
 import org.mwg.task.Task;
 
+import static org.mwg.task.Actions.fromIndexAll;
+import static org.mwg.task.Actions.get;
+
 public class HelloWorld {
 
     public static void main(String[] args) {
@@ -58,13 +61,20 @@ public class HelloWorld {
             System.out.println(model.findClouds(0, 0, "name=NOOP"));
 
             //Test task usage
+            fromIndexAll("clouds")
+                    .foreach(get("name")
+                            .then(ctx -> {
+                                System.out.println(((Object[]) ctx.result())[0]);
+                            })).execute(model.graph());
+
+/*
             Task t = model.graph().newTask();
             t.fromIndexAll("clouds")
                     .get("name")
                     .foreach(model.graph().newTask()
                             .then(context -> System.out.println(context.result()))
                     ).execute();
-
+*/
         });
 
 
