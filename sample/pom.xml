@@ -9,7 +9,8 @@
     <name>kmf :: Sample</name>
 
     <properties>
-        <kmf.version>1-SNAPSHOT</kmf.version>
+        <kmf.version>1</kmf.version>
+        <mwg.version>5</mwg.version>
     </properties>
 
     <build>
@@ -53,12 +54,12 @@
         <dependency>
             <groupId>org.kevoree.mwg</groupId>
             <artifactId>core</artifactId>
-            <version>5-SNAPSHOT</version>
+            <version>${mwg.version}</version>
         </dependency>
         <dependency>
             <groupId>org.kevoree.mwg.plugins</groupId>
             <artifactId>ml</artifactId>
-            <version>5-SNAPSHOT</version>
+            <version>${mwg.version}</version>
         </dependency>
 
     </dependencies>
