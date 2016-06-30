@@ -3,12 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>generator</artifactId>
     <name>kmf :: Generator</name>
-    <version>1</version>
+    <version>2-SNAPSHOT</version>
 
     <parent>
         <groupId>org.kevoree.kmf</groupId>
         <artifactId>kmf</artifactId>
-        <version>1</version>
+        <version>2-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
 
@@ -21,7 +21,7 @@
         <dependency>
             <groupId>org.kevoree.kmf</groupId>
             <artifactId>dsl</artifactId>
-            <version>1</version>
+            <version>2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.jboss.forge.roaster</groupId>
