@@ -5,6 +5,7 @@ import org.mwg.Callback;
 import org.mwg.GraphBuilder;
 import cloud.Cloud;
 import org.mwg.Node;
+import org.mwg.task.Task;
 
 public class HelloWorld {
 
@@ -12,6 +13,8 @@ public class HelloWorld {
 
         sampleModel model = new sampleModel(new GraphBuilder().withOffHeapMemory());
         model.graph().connect(result -> {
+
+            //Test typed node creation
             Cloud cloud = model.newCloud(0, 0);
             Server server = model.newServer(0, 0);
             server.setName("Hello");
@@ -39,7 +42,7 @@ public class HelloWorld {
 
             System.out.println(soft0.getLoad());
 
-
+            //Test find usage
             model.graph().findAll(0, 0, "clouds", cloudsResult -> {
                 System.out.println(cloudsResult[0]);
             });
@@ -50,10 +53,17 @@ public class HelloWorld {
             Software[] softwares = model.findAllClouds(0, 0);
             System.out.println(softwares[0]);
 
-            System.out.println(model.findClouds(0,0,"name=Hello"));
+            System.out.println(model.findClouds(0, 0, "name=Hello"));
 
-            System.out.println(model.findClouds(0,0,"name=NOOP"));
+            System.out.println(model.findClouds(0, 0, "name=NOOP"));
 
+            //Test task usage
+            Task t = model.graph().newTask();
+            t.fromIndexAll("clouds")
+                    .get("name")
+                    .foreach(model.graph().newTask()
+                            .then(context -> System.out.println(context.result()))
+                    ).execute();
 
         });
 
