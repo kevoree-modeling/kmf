@@ -308,9 +308,9 @@ public class Generator {
         MethodSource<JavaClassSource> modelConstructor = modelClass.addMethod().setConstructor(true);
         modelConstructor.addParameter(GraphBuilder.class, "builder");
         if (useML) {
-            modelConstructor.setBody("this._graph = builder.withPlugin(new org.mwg.ml.MLPlugin()).withPlugin(new samplePlugin()).build();");
+            modelConstructor.setBody("this._graph = builder.withPlugin(new org.mwg.ml.MLPlugin()).withPlugin()new " + name + "Plugin().build();");
         } else {
-            modelConstructor.setBody("this._graph = builder.withPlugin(new samplePlugin()).build();");
+            modelConstructor.setBody("this._graph = builder.withPlugin(new " + name + "Plugin()).build();");
         }
         modelClass.addMethod().setName("graph").setBody("return this._graph;").setVisibility(Visibility.PUBLIC).setFinal(true).setReturnType(Graph.class);
 
